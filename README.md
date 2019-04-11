@@ -28,4 +28,4 @@ and then
 
 `drift-runpipeline run pipe_params.yaml`
 
-To make these examples run quicker, reduce the number of pointings or the size of the antenna grid.
+To make this example run quicker, reduce the number of pointings or the size of the antenna grid.
