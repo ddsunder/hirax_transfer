@@ -1,0 +1,67 @@
+
+config:
+    # Only generate Beam Transfers.
+    beamtransfers:      Yes
+    kltransform:        No
+    psfisher:           No
+
+    output_directory:   products/
+
+    svcut: 1e-6
+    polsvcut: 1e-6
+
+telescope:
+    type:
+        class:  HIRAXSurvey
+        module: hirax_transfer.core
+
+    # Set the elevation pointings of a HIRAX survey
+    pointing_start: -5
+    pointing_stop: 5
+    npointings: 3
+    # For a single pointing use:
+    #
+    # pointing_start: 0
+    # pointing_stop: 0
+    # npointings: 1
+
+    hirax_spec:
+        # Set band parameters:
+        freq_lower: 600.
+        freq_upper: 600.4
+        num_freq: 1
+
+        # Other parameters (See drift.core.telescope)
+        auto_correlations: Yes
+        tsys_flat: 50.0
+        dish_width: 6.0
+        lmax: 500
+        mmax: 500
+        ndays: 733 # When noise weighting is needed, will assume an integration
+                   # time of this many days.
+
+        hirax_layout: # See hirax_transfer.layouts
+            type: square_grid
+            spacing: 6.0
+            grid_size: 2
+
+            # Can alternatively read arbitrary layout from a text file with
+            # columns: EW offset [m], NS offset [m] by doing:
+            # 
+            # type: file
+            # filename: layout.txt
+
+        hirax_beam: # See hirax_transfer.beams
+            type: gaussian
+            diameter: 6.
+            fwhm_factor: 1.0
+
+            # Can also support and airy beam:
+            # 
+            # type: airy
+            # diameter: 6.0
+
+            # Or an arbitrary beam evaluated on a healpix map
+            #
+            # type: healpix
+            # filename: beam.hdf5

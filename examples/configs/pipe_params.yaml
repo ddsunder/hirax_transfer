@@ -1,0 +1,17 @@
+config:
+    product_directory:  products/
+
+    generate_modes:    Yes
+    generate_maps:     Yes
+
+timestreams:
+    -   name:       ts_nonoise
+        directory:  /products
+
+        simulate:
+            maps:
+              - /maps/21cm_nside_128.h5
+
+            product_directory:  products/
+            ndays:  0
+            
