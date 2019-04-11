@@ -35,8 +35,8 @@ telescope:
         auto_correlations: Yes
         tsys_flat: 50.0
         dish_width: 6.0
-        lmax: 500
-        mmax: 500
+        lmax: 200
+        mmax: 200
         ndays: 733 # When noise weighting is needed, will assume an integration
                    # time of this many days.
 

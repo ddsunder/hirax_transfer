@@ -28,4 +28,6 @@ and then
 
 `drift-runpipeline run pipe_params.yaml`
 
+For the second step you'll need to point to code to a simulated map generated with cora.
+
 To make this example run quicker, reduce the number of pointings or the size of the antenna grid.

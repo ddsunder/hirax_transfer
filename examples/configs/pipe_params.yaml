@@ -6,7 +6,7 @@ config:
 
 timestreams:
     -   name:       ts_nonoise
-        directory:  /products
+        directory:  products/
 
         simulate:
             maps:
