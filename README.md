@@ -2,7 +2,7 @@
 
 Other than standard scientific python libraries, this code requires:
 
-- `driftscan`
+- `driftscan` (Currently only tested to work with the hirax_dev branch at [https://github.com/hirax-array/driftscan])
 - `cora`
 - `caput`
 
