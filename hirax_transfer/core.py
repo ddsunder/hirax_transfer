@@ -23,6 +23,7 @@ class HIRAXSinglePointing(SimplePolarisedTelescope):
 
     tsys_flat = config.Property(proptype=float, default=50.0)
     ndays = config.Property(proptype=int, default=733)
+    redundancy_boost = config.Property(proptype=float, default=1.0)
 
     accuracy_boost = config.Property(proptype=float, default=1.0)
     l_boost = config.Property(proptype=float, default=1.0)
@@ -118,6 +119,10 @@ class HIRAXSurvey(HIRAXSinglePointing):
     @property
     def v_width(self):
         return self._base_telescope.v_width
+
+    @property
+    def redundancy(self):
+        return self.redundancy_boost*super(HIRAXSinglePointing, self).redundancy()
 
     @property
     def _single_feedpositions(self):
