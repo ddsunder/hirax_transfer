@@ -122,7 +122,7 @@ class HIRAXSurvey(HIRAXSinglePointing):
 
     @property
     def redundancy(self):
-        return self.redundancy_boost*super(HIRAXSinglePointing, self).redundancy()
+        return self.redundancy_boost*super(HIRAXSinglePointing, self).redundancy
 
     @property
     def _single_feedpositions(self):
