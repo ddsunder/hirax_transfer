@@ -44,9 +44,9 @@ class HIRAXSinglePointing(SimplePolarisedTelescope):
 
     def read_config(self, conf):
         beam_conf = conf.pop('hirax_beam')
-        self._beam = fetch_beam(beam_conf)
+        self.hirax_beam = fetch_beam(beam_conf)
         layout_conf = conf.pop('hirax_layout')
-        self._layout = fetch_layout(layout_conf)
+        self.hirax_layout = fetch_layout(layout_conf)
         super(HIRAXSinglePointing, self).read_config(conf)
 
     # Give the widths in the U and V directions in metres (used for
@@ -63,20 +63,20 @@ class HIRAXSinglePointing(SimplePolarisedTelescope):
     def beamx(self, feed, freq, pointing=None):
         if pointing is None:
             pointing = self.zenith
-        beam = self._beam(self._angpos, pointing, self.wavelengths[freq], feed, 0)
+        beam = self.hirax_beam(self._angpos, pointing, self.wavelengths[freq], feed, 0)
         beam = beam[:, np.newaxis] * np.array([0.0, 1.0])
         return beam
 
     def beamy(self, feed, freq, pointing=None):
         if pointing is None:
             pointing = self.zenith
-        beam = self._beam(self._angpos, pointing, self.wavelengths[freq], feed, 1)
+        beam = self.hirax_beam(self._angpos, pointing, self.wavelengths[freq], feed, 1)
         beam = beam[:, np.newaxis] * np.array([1.0, 0.0])
         return beam
 
     @property
     def _single_feedpositions(self):
-        return self._layout()
+        return self.hirax_layout()
 
 
 # @copy_reader_properties(HIRAXSinglePointing)
@@ -95,30 +95,30 @@ class HIRAXSurvey(HIRAXSinglePointing):
     @property
     def pointing_feedmap(self):
         return np.repeat(np.arange(len(self.pointings)),
-                         self._base_telescope.nfeed)
+                         self.single_pointing_telescope.nfeed)
 
     def read_config(self, conf):
         nconf = conf.copy()
         nconf.update(conf['hirax_spec'])
         super(HIRAXSurvey, self).read_config(nconf)
         # Make sure this also gets sorted for no-config initialisation...
-        self._base_telescope = HIRAXSinglePointing.from_config(conf['hirax_spec'])
+        self.single_pointing_telescope = HIRAXSinglePointing.from_config(conf['hirax_spec'])
 
     def _calculate_feedpairs(self):
-        self._base_telescope.calculate_feedpairs()
+        self.single_pointing_telescope.calculate_feedpairs()
         super(HIRAXSurvey, self).calculate_feedpairs()
 
     def _init_trans(self, nside):
         super(HIRAXSurvey, self)._init_trans(nside)
-        self._base_telescope._init_trans(nside)
+        self.single_pointing_telescope._init_trans(nside)
 
     @property
     def u_width(self):
-        return self._base_telescope.u_width
+        return self.single_pointing_telescope.u_width
 
     @property
     def v_width(self):
-        return self._base_telescope.v_width
+        return self.single_pointing_telescope.v_width
 
     @property
     def redundancy(self):
@@ -126,16 +126,16 @@ class HIRAXSurvey(HIRAXSinglePointing):
 
     @property
     def _single_feedpositions(self):
-        return np.tile(self._base_telescope._single_feedpositions,
+        return np.tile(self.single_pointing_telescope._single_feedpositions,
                        (len(self.pointings), 1))
 
     def _unique_baselines(self):
         """
         Ensures baselines from different pointings are treated as unique
         """
-        fmap, mask = self._base_telescope._unique_baselines()
+        fmap, mask = self.single_pointing_telescope._unique_baselines()
 
-        block_fmap = linalg.block_diag(*[fmap+i*self._base_telescope.nfeed for i, _ in enumerate(self.pointings)])
+        block_fmap = linalg.block_diag(*[fmap+i*self.single_pointing_telescope.nfeed for i, _ in enumerate(self.pointings)])
         block_mask = linalg.block_diag(*[mask for _ in self.pointings])
 
         return _remap_keyarray(block_fmap, block_mask), block_mask
@@ -144,29 +144,29 @@ class HIRAXSurvey(HIRAXSinglePointing):
         """
         Ensures beams from different pointings are treated as unique
         """
-        bmap, mask = self._base_telescope._unique_beams()
-        block_bmap = linalg.block_diag(*[bmap+i*self._base_telescope.nfeed for i, _ in enumerate(self.pointings)])
+        bmap, mask = self.single_pointing_telescope._unique_beams()
+        block_bmap = linalg.block_diag(*[bmap+i*self.single_pointing_telescope.nfeed for i, _ in enumerate(self.pointings)])
         block_mask = linalg.block_diag(*[mask for _ in self.pointings])
 
         return block_bmap, block_mask
 
     @property
     def beamclass(self):
-        return np.tile(self._base_telescope.beamclass, len(self.pointings))
+        return np.tile(self.single_pointing_telescope.beamclass, len(self.pointings))
 
     def beamx(self, feed, freq):
         ddec = np.radians(self.pointings[self.pointing_feedmap[feed]])
         pointing_vector = np.array([
-            self._base_telescope.zenith[0] - ddec, # negative for healpix convention
-            self._base_telescope.zenith[1]])
-        return self._base_telescope.beamx(feed, freq, pointing=pointing_vector)
+            self.single_pointing_telescope.zenith[0] - ddec, # negative for healpix convention
+            self.single_pointing_telescope.zenith[1]])
+        return self.single_pointing_telescope.beamx(feed, freq, pointing=pointing_vector)
 
     def beamy(self, feed, freq):
         ddec = np.radians(self.pointings[self.pointing_feedmap[feed]])
         pointing_vector = np.array([
-            self._base_telescope.zenith[0] - ddec, # negative for healpix convention
-            self._base_telescope.zenith[1]])
-        return self._base_telescope.beamy(feed, freq, pointing=pointing_vector)
+            self.single_pointing_telescope.zenith[0] - ddec, # negative for healpix convention
+            self.single_pointing_telescope.zenith[1]])
+        return self.single_pointing_telescope.beamy(feed, freq, pointing=pointing_vector)
 
     """
     Visualisation helpers,
