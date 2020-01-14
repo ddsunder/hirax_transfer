@@ -43,7 +43,7 @@ class AiryBeam(config.Reader):
 
         seps = separations(angpos, zenith)
         x = np.pi*self.diameter/wavelength*np.sin(seps)
-        out = (2*bessel_j1(x)/x)**2
+        out = (2*bessel_j1(x)/x)  # (Voltage Beam)
         out[np.degrees(seps) > self.sep_limit] = 0.
         return out
 
@@ -59,7 +59,7 @@ class GaussianBeam(config.Reader):
         sigma = gaussian_fwhm_to_sigma*fwhm
         seps = separations(angpos, zenith)
 
-        out = np.exp(-seps**2/2/sigma**2)
+        out = np.exp(-seps**2/2/sigma**2)**0.5  # (Voltage Beam)
         if np.isfinite(self.sep_limit):
             out[np.degrees(seps) > self.sep_limit] = 0.
         return out
