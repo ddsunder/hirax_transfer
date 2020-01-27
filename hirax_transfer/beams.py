@@ -64,22 +64,40 @@ class GaussianBeam(config.Reader):
             out[np.degrees(seps) > self.sep_limit] = 0.
         return out
 
-class HEALpixBeam(config.Reader):
+class HEALPixBeam(config.Reader):
+
+    """
+    Much of this is hard-coded and would benefit from
+    a class that handles all of this better...
+    Assumes hdf5 file containts "beam" dataset with dims:
+    pol_index (x/y feed), freq, healpix pixels, v/h
+    Must setup so h5py will read as complex
+    (usually 'r' and 'i' compound dset)
+    Assumes the input beam is pointed at [phi=pi, theta=pi/2]
+    Also an "index_map/freqs" with frequencies in MHz
+    This can fail badly if the beamtransfer class ends up
+    using a different nside...
+    """
 
     filename = config.Property(proptype=str)
-    # Assumes "beam" dataset with dims: pol, freq, pixels
-    # and "index_map/freqs" with frequencies in MHz
 
     def __call__(self, angpos, zenith, wavelength, feed, pol_index):
 
         freq = (wavelength*units.m).to('MHz', equivalencies=units.spectral()).value
 
         with h5py.File(self.filename, 'r') as fil:
-            freq_ind = np.argmin(np.abs(fil['index_map/freqs'] - freq))
-            return fil['beam'][pol_index, freq_ind, :]
+            freq_ind = np.argmin(np.abs(fil['index_map/freqs'][()] - freq))
+            beam = fil['beam'][pol_index, freq_ind, :][()]
+
+        rot = [0, zenith[0]-np.pi/2]
+        r = hp.Rotator(deg=False, rot=rot)
+        return np.stack(
+            [r.rotate_map_pixel(beam[..., 0]),
+             r.rotate_map_pixel(beam[..., 1])
+            ], axis=-1)
 
 BEAM_TYPES = {
     'airy': AiryBeam,
     'gaussian': GaussianBeam,
-    'healpix': HEALpixBeam,
+    'healpix': HEALPixBeam,
 }

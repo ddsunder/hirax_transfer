@@ -64,14 +64,18 @@ class HIRAXSinglePointing(SimplePolarisedTelescope):
         if pointing is None:
             pointing = self.zenith
         beam = self.hirax_beam(self._angpos, pointing, self.wavelengths[freq], feed, 0)
-        beam = beam[:, np.newaxis] * np.array([0.0, 1.0])
+        # Assume non-vector beam has perfect polarisation separation
+        if beam.ndim < 2:
+            beam = beam[:, np.newaxis] * np.array([0.0, 1.0])
         return beam
 
     def beamy(self, feed, freq, pointing=None):
         if pointing is None:
             pointing = self.zenith
         beam = self.hirax_beam(self._angpos, pointing, self.wavelengths[freq], feed, 1)
-        beam = beam[:, np.newaxis] * np.array([1.0, 0.0])
+        # Assume non-vector beam has perfect polarisation separation
+        if beam.ndim < 2:
+            beam = beam[:, np.newaxis] * np.array([1.0, 0.0])
         return beam
 
     @property
