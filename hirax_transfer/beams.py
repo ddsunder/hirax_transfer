@@ -12,6 +12,12 @@ import healpy as hp
 
 from caput import config
 
+def fetch_taper(conf):
+    if 'taper' in conf.keys():
+        return BEAMTaper.from_config(conf['taper'])
+    else:
+        return None
+
 def fetch_beam(conf):
     btype = conf['type']
     return BEAM_TYPES[btype].from_config(conf)
@@ -101,3 +107,39 @@ BEAM_TYPES = {
     'gaussian': GaussianBeam,
     'healpix': HEALPixBeam,
 }
+
+class BEAMTaper(config.Reader):
+
+    level = config.Property(proptype=float, default=0.) # in dB
+    start = config.Property(proptype=float, default=3) # radius in FWHM units
+    end = config.Property(proptype=float, default=5)  # radius in FWHM units
+    diameter = config.Property(proptype=float, default=6)  # in m, for FWHM calculation
+    # type = ## in future specify type of taper maybe
+
+    def __call__(self, angpos, zenith, wavelength):
+
+        seps = separations(angpos, zenith)
+        FWHM = wavelength/self.diameter # in rad
+        dec_lev = 10**(0.1*self.level)
+
+        normed_seps = seps / FWHM
+
+        out = np.ones_like(seps)
+        out[normed_seps < self.start] = 1.
+        out[normed_seps >= self.end] = dec_lev
+
+        taper_inds = (normed_seps >= self.start) & (normed_seps < self.end)
+        nseps = normed_seps[taper_inds]
+
+        taper_range = (nseps - self.start)*np.pi/(self.end - self.start)
+        tape_func = ((np.cos(taper_range) + 1)/2.)
+
+        if self.level >= 0:
+            out[taper_inds] = (1 - tape_func)*(dec_lev - 1) + 1
+        else:
+            out[taper_inds] = (tape_func)*(1 - dec_lev) + dec_lev
+
+        return out
+
+    
+

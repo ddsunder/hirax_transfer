@@ -11,7 +11,7 @@ from caput import config
 from drift.core.telescope import SimplePolarisedTelescope
 from drift.core.telescope import _remap_keyarray, _merge_keyarray
 
-from .beams import fetch_beam
+from .beams import fetch_beam, fetch_taper
 from .layouts import fetch_layout
 
 # Based on DishArray
@@ -45,6 +45,7 @@ class HIRAXSinglePointing(SimplePolarisedTelescope):
     def read_config(self, conf):
         beam_conf = conf.pop('hirax_beam')
         self.hirax_beam = fetch_beam(beam_conf)
+        self.beam_taper = fetch_taper(beam_conf)
         layout_conf = conf.pop('hirax_layout')
         self.hirax_layout = fetch_layout(layout_conf)
         super(HIRAXSinglePointing, self).read_config(conf)
@@ -67,6 +68,9 @@ class HIRAXSinglePointing(SimplePolarisedTelescope):
         # Assume non-vector beam has perfect polarisation separation
         if beam.ndim < 2:
             beam = beam[:, np.newaxis] * np.array([0.0, 1.0])
+        if self.beam_taper is not None:
+            beam = beam * self.beam_taper(
+                self._angpos, pointing, self.wavelengths[freq])[:, np.newaxis]
         return beam
 
     def beamy(self, feed, freq, pointing=None):
@@ -76,6 +80,9 @@ class HIRAXSinglePointing(SimplePolarisedTelescope):
         # Assume non-vector beam has perfect polarisation separation
         if beam.ndim < 2:
             beam = beam[:, np.newaxis] * np.array([1.0, 0.0])
+        if self.beam_taper is not None:
+            beam = beam * self.beam_taper(
+                self._angpos, pointing, self.wavelengths[freq])[:, np.newaxis]
         return beam
 
     @property
