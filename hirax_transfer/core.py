@@ -69,8 +69,8 @@ class HIRAXSinglePointing(SimplePolarisedTelescope):
         if beam.ndim < 2:
             beam = beam[:, np.newaxis] * np.array([0.0, 1.0])
         if self.beam_taper is not None:
-            beam = beam * self.beam_taper(
-                self._angpos, pointing, self.wavelengths[freq])[:, np.newaxis]
+            beam[:, 0] *= self.beam_taper(
+                self._angpos, pointing, self.wavelengths[freq])
         return beam
 
     def beamy(self, feed, freq, pointing=None):
@@ -81,8 +81,8 @@ class HIRAXSinglePointing(SimplePolarisedTelescope):
         if beam.ndim < 2:
             beam = beam[:, np.newaxis] * np.array([1.0, 0.0])
         if self.beam_taper is not None:
-            beam = beam * self.beam_taper(
-                self._angpos, pointing, self.wavelengths[freq])[:, np.newaxis]
+            beam[:, 1] *= self.beam_taper(
+                self._angpos, pointing, self.wavelengths[freq])
         return beam
 
     @property

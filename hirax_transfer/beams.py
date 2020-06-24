@@ -140,6 +140,3 @@ class BEAMTaper(config.Reader):
             out[taper_inds] = (tape_func)*(1 - dec_lev) + dec_lev
 
         return out
-
-    
-
