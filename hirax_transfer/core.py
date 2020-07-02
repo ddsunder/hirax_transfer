@@ -8,6 +8,7 @@ import astropy.units as units
 import astropy.coordinates as coords
 
 from caput import config
+from drift.core import visibility
 from drift.core.telescope import SimplePolarisedTelescope
 from drift.core.telescope import _remap_keyarray, _merge_keyarray
 
@@ -61,26 +62,32 @@ class HIRAXSinglePointing(SimplePolarisedTelescope):
     def v_width(self):
         return self.dish_width
 
-    def beamx(self, feed, freq, pointing=None):
+    def beam(self, feed, freq, ignore_taper=False):
+        if self.polarisation[feed] == "X":
+            return self.beamx(feed, freq, ignore_taper=ignore_taper)
+        else:
+            return self.beamy(feed, freq, ignore_taper=ignore_taper)
+
+    def beamx(self, feed, freq, pointing=None, ignore_taper=False):
         if pointing is None:
             pointing = self.zenith
         beam = self.hirax_beam(self._angpos, pointing, self.wavelengths[freq], feed, 0)
         # Assume non-vector beam has perfect polarisation separation
         if beam.ndim < 2:
             beam = beam[:, np.newaxis] * np.array([0.0, 1.0])
-        if self.beam_taper is not None:
+        if (self.beam_taper is not None) and not ignore_taper:
             beam[:, 0] *= self.beam_taper(
                 self._angpos, pointing, self.wavelengths[freq])
         return beam
 
-    def beamy(self, feed, freq, pointing=None):
+    def beamy(self, feed, freq, pointing=None, ignore_taper=False):
         if pointing is None:
             pointing = self.zenith
         beam = self.hirax_beam(self._angpos, pointing, self.wavelengths[freq], feed, 1)
         # Assume non-vector beam has perfect polarisation separation
         if beam.ndim < 2:
             beam = beam[:, np.newaxis] * np.array([1.0, 0.0])
-        if self.beam_taper is not None:
+        if (self.beam_taper is not None) and not ignore_taper:
             beam[:, 1] *= self.beam_taper(
                 self._angpos, pointing, self.wavelengths[freq])
         return beam
@@ -88,6 +95,45 @@ class HIRAXSinglePointing(SimplePolarisedTelescope):
     @property
     def _single_feedpositions(self):
         return self.hirax_layout()
+
+    # Overloading to change solid angle calc.
+    def _beam_map_single(self, bl_index, f_index):
+
+        p_stokes = [
+            0.5 * np.array([[1.0, 0.0], [0.0, 1.0]]),
+            0.5 * np.array([[1.0, 0.0], [0.0, -1.0]]),
+            0.5 * np.array([[0.0, 1.0], [1.0, 0.0]]),
+            0.5 * np.array([[0.0, -1.0j], [1.0j, 0.0]]),
+        ]
+
+        # Get beam maps for each feed.
+        feedi, feedj = self.uniquepairs[bl_index]
+        beami, beamj = self.beam(feedi, f_index), self.beam(feedj, f_index)
+
+        # Get baseline separation and fringe map.
+        uv = self.baselines[bl_index] / self.wavelengths[f_index]
+        fringe = visibility.fringe(self._angpos, self.zenith, uv)
+
+        pow_stokes = [
+            np.sum(beami * np.dot(beamj.conjugate(), polproj), axis=1) * self._horizon
+            for polproj in p_stokes
+        ]
+
+        # Calculate the solid angle of each beam
+        pxarea = 4 * np.pi / beami.shape[0]
+        # Ensure sa calculated assuming nominal beam so main lobe is identical
+        beami_for_sa = self.beam(feedi, f_index, ignore_taper=True)
+        beamj_for_sa = self.beam(feedj, f_index, ignore_taper=True)
+
+        om_i = np.sum(np.abs(beami_for_sa) ** 2 * self._horizon[:, np.newaxis]) * pxarea
+        om_j = np.sum(np.abs(beamj_for_sa) ** 2 * self._horizon[:, np.newaxis]) * pxarea
+
+        omega_A = (om_i * om_j) ** 0.5
+
+        # Calculate the complex visibility transfer function
+        cv_stokes = [p * (2 * fringe / omega_A) for p in pow_stokes]
+
+        return cv_stokes
 
 
 # @copy_reader_properties(HIRAXSinglePointing)
@@ -165,19 +211,21 @@ class HIRAXSurvey(HIRAXSinglePointing):
     def beamclass(self):
         return np.tile(self.single_pointing_telescope.beamclass, len(self.pointings))
 
-    def beamx(self, feed, freq):
+    def beamx(self, feed, freq, ignore_taper=False):
         ddec = np.radians(self.pointings[self.pointing_feedmap[feed]])
         pointing_vector = np.array([
             self.single_pointing_telescope.zenith[0] - ddec, # negative for healpix convention
             self.single_pointing_telescope.zenith[1]])
-        return self.single_pointing_telescope.beamx(feed, freq, pointing=pointing_vector)
+        return self.single_pointing_telescope.beamx(feed, freq, pointing=pointing_vector,
+                                                    ignore_taper=ignore_taper)
 
-    def beamy(self, feed, freq):
+    def beamy(self, feed, freq, ignore_taper=False):
         ddec = np.radians(self.pointings[self.pointing_feedmap[feed]])
         pointing_vector = np.array([
             self.single_pointing_telescope.zenith[0] - ddec, # negative for healpix convention
             self.single_pointing_telescope.zenith[1]])
-        return self.single_pointing_telescope.beamy(feed, freq, pointing=pointing_vector)
+        return self.single_pointing_telescope.beamy(feed, freq, pointing=pointing_vector,
+                                                    ignore_taper=ignore_taper)
 
     """
     Visualisation helpers,
