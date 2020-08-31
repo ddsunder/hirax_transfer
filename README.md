@@ -1,3 +1,7 @@
+# Update log
+
+- 31 August 2020, added rotated square grid layout and a general user friend sample use file. 
+
 # Requirements
 
 Other than standard scientific python libraries, this code requires:
