@@ -1,5 +1,6 @@
 # Update log
 
+- 3 September 2020, added in Sarea and FoV calculations
 - 31 August 2020, added rotated square grid layout and a general user friend sample use file. 
 
 # Requirements
